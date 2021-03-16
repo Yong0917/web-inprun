@@ -19,11 +19,11 @@ public class HelloController {
 
     @GetMapping("hello-mvc")
     public String helloMvc(@RequestParam("name") String name, Model model){
-        model.addAttribute("name",name);
+        model.addAttribute("name",name);			//html에 있는 name에 매칭
 
         return "hello-template";
     }
-    
+
     @GetMapping("hello-string")
     @ResponseBody
     public String helloString(@RequestParam("name") String name){
