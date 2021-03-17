@@ -18,12 +18,10 @@ import org.springframework.stereotype.Repository;
 
 
 
-@Repository
 public class JdbcMemberRepository implements MemberRepository {
 
     private final DataSource dataSource;
 
-    @Autowired
     public JdbcMemberRepository(DataSource dataSource) {
         this.dataSource = dataSource;
     }
