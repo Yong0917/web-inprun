@@ -1,6 +1,6 @@
-package com.project2.demo;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -9,11 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-
-//현재까지 s값을 쿼리해서 LC_PATH 컬럼의 경로에 있는 csv을 line별로 읽어서 test table에 insert
-// insert완료했으면 STATUS와 경로를 바꿈
-
-public class Test3 {
+public class FileParsing2 {
 
     public static void main(String[] args) {
 
@@ -22,12 +18,12 @@ public class Test3 {
         ResultSet result = null;
         ResultSet result2 = null;
 
-                                                                                // 현재 날짜에서 -1
+        // 현재 날짜에서 -1
 
         try {
-            String jdbcDriver = "jdbc:mariadb://20.194.36.231:13306/ERD";
-            String dbUser = "yong";
-            String dbPass = "spidertm404040";
+            String jdbcDriver = "jdbc:mariadb://localhost:13306/ERD";
+            String dbUser = "igloosec";
+            String dbPass = "sp!dertm404040";
             conn = DriverManager.getConnection(jdbcDriver,dbUser,dbPass);
             stmt = conn.createStatement();
 
@@ -36,11 +32,10 @@ public class Test3 {
 
             //result = select * from costfilelog where STATUS = 'S'
             while(result.next()) {
-                System.out.println(result.getString("LC_PATH"));
 
-                //임시로 경로 replace 후에 replaceAll 삭제
-                String rs = result.getString("LC_PATH")
-                        .replace("/usr/azureCostFile/received/", "D:/csvFile/received/");
+                //LC_PATH 안에 csv 경로 추출
+                String rs = result.getString("LC_PATH");
+                System.out.println("CSV File  : " + rs);
 
 
 
@@ -48,7 +43,7 @@ public class Test3 {
                 Date date = null;
 
                 String rsd = result.getString("LC_PATH");       // 수정 : rsd를 빼고 rs로 수정
-                String time1 = rsd.substring(33,41);                // 날짜 분리 ex) 20210405
+                String time1 = rsd.substring(33,41);                // csv파일명 날짜 분리 ex) 20210405
                 date = format1.parse(time1);
 
                 SimpleDateFormat format2 = new SimpleDateFormat ( "yyyy-MM-dd");
@@ -57,27 +52,25 @@ public class Test3 {
                 cal.setTime(date);
                 cal.add(Calendar.DATE, -1);                 // 날짜에서 -1 ex) 20210404
                 String today1 = format2.format(cal.getTime());
-                System.out.println("today " + today1);
 
 
 
                 File csvfile = new File(rs);
                 String line = null;
                 String[] coordi;
-                // rs에 LC_PATH에 경로가 담겨져있음.(한줄 씩 )
+                String coord3;
+
+                // rs에 LC_PATH에 경로가 담겨져있음.(한줄 씩 파일 읽음)
                 BufferedReader bufReader = new BufferedReader(new FileReader(csvfile));
                 for (int i = 1; (line = bufReader.readLine()) != null; i++) {           // path csv 하나씩 읽어서 한줄씩 parse
                     if (i == 1) {             //header 출력 x
                         continue;
                     }
                     else {
-                        System.out.println(result.getString("LC_PATH"));
-                        coordi = line.split(",");
+                        coord3 = line.replace("\", " , "\"# ");
+                        coordi = coord3.split(",");
 
-                        System.out.println(bufReader.readLine());
                         // insert csvfile 테이블
-                        System.out.println("tenantId = " + coordi[4]  +", date = "+ today1 + ", amount = "+coordi[38]);
-                        System.out.println("1---- " + coordi[1] + "2-----"+coordi[2]+"3-------" +coordi[3] +"38----" +coordi[44]);
                         //coordi[4] = tenantId  , coordi[29] = rscListId , date = today, amount = coordi[38]
                         //rscListId 중복되면 업데이트
                         String qry4 = "insert into USED_AMOUNT(rscListId,date,amount,partnerName,resellerName,resellerMpnId,customerTenantId" +
@@ -87,7 +80,7 @@ public class Test3 {
                                 "resourceLocation,location,effectivePrice,quantity,unitOfMeasure,chargeType,billingCurrency,pricingCurrency" +
                                 ",costInBillingCurrency,costInUsd,exchangeRatePricingToBilling,exchangeRateDate,serviceInfo2,additionalInfo," +
                                 "tags,PayGPrice,frequency) " +
-                                    "values ('" + coordi[29] + "' ,'" + today1 + "' ,'" + coordi[38] + "','" + coordi[1] + "','" + coordi[2] + "'" +
+                                "values ('" + coordi[29] + "' ,'" + today1 + "' ,'" + coordi[38] + "','" + coordi[1] + "','" + coordi[2] + "'" +
                                 ",'" + coordi[3] + "','" + coordi[4] + "','" + coordi[5] + "','" + coordi[9] + "','" + coordi[10] + "','" + coordi[11] + "'" +
                                 ",'" + coordi[12] + "','" + coordi[13] + "','" + coordi[14] + "','" + coordi[15] + "','" + coordi[16] + "','" + coordi[17] + "'" +
                                 ",'" + coordi[18] + "','" + coordi[19] + "','" + coordi[20] + "','" + coordi[21] + "','" + coordi[22] + "','" + coordi[23] + "'" +
@@ -108,22 +101,16 @@ public class Test3 {
                     }
                 }
 
-//                //STATUS 'S' ----> 'C'
-//                //LC_PATH_Af를 임시로 쓰고있어서 후에 없애고 qry2에 LC_PATH_Af를 rs로 교체
-//                String LC_PATH_Af = result.getString("LC_PATH");
-//                String qry2 = "update costfilelog set STATUS = 'C' where LC_PATH = '" + LC_PATH_Af + "' ;";
-//                stmt.executeUpdate(qry2);
-//
-//                //LC_PATH 'received' ----> 'complete'
-//                String LC_PATH_After = LC_PATH_Af
-//                        .replace("/usr/azureCostFile/received/", "/usr/azureCostFile/complete/");
-//                String qry3 = "update costfilelog set LC_PATH = '" + LC_PATH_After + "' where LC_PATH = '" + LC_PATH_Af + "';";
-//                stmt.executeUpdate(qry3);
-//
-//                // rs = csv 파일 파싱(LC_PATH);
-//                // table insert(rs);
-//                // 상태 변경 , 경로 변경
-//                // 실제 파일 complete로 옮기기
+                //STATUS 'S' ----> 'C'
+                String qry2 = "update costfilelog set STATUS = 'C' where LC_PATH = '" + rs + "' ;";
+                stmt.executeUpdate(qry2);
+
+
+                //LC_PATH 'received' ----> 'complete'
+                String LC_PATH_After = rs.replace("/usr/azureCostFile/received/", "/usr/azureCostFile/complete/");
+                String qry3 = "update costfilelog set LC_PATH = '" + LC_PATH_After + "' where LC_PATH = '" + rs + "';";
+                stmt.executeUpdate(qry3);
+
             }
 
         } catch (Exception e) {
@@ -139,3 +126,5 @@ public class Test3 {
     }
 
 }
+
+
