@@ -1,3 +1,6 @@
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -11,32 +14,38 @@ import java.util.Date;
 
 public class FileParsing2 {
 
+    private static final Logger logger = Logger.getLogger(FileParsing2.class);
+
     public static void main(String[] args) {
+        BasicConfigurator.configure();
+
+        logger.info("--------------------------FileParsing START--------------------------");
 
         Connection conn = null;
         Statement stmt = null;
         ResultSet result = null;
         ResultSet result2 = null;
 
-        // 현재 날짜에서 -1
-
         try {
+            logger.info("DB Connect");
             String jdbcDriver = "jdbc:mariadb://localhost:13306/ERD";
             String dbUser = "igloosec";
             String dbPass = "sp!dertm404040";
             conn = DriverManager.getConnection(jdbcDriver,dbUser,dbPass);
             stmt = conn.createStatement();
+            logger.info("DB Connect Complete");
 
             String query1 = "select * from costfilelog where STATUS = 'S';";    //STATUS = 'S' 인 쿼리
             result = stmt.executeQuery(query1);
 
             //result = select * from costfilelog where STATUS = 'S'
+            logger.info("Query select costfilelog where STATUS = S ");
             while(result.next()) {
 
                 //LC_PATH 안에 csv 경로 추출
                 String rs = result.getString("LC_PATH");
                 System.out.println("CSV File  : " + rs);
-
+                logger.info("File Selected(START) : " + rs);
 
 
                 SimpleDateFormat format1 = new SimpleDateFormat ( "yyyyMMdd");
@@ -61,15 +70,15 @@ public class FileParsing2 {
                 String coord3;
 
                 // rs에 LC_PATH에 경로가 담겨져있음.(한줄 씩 파일 읽음)
+                logger.info("File Read,insert(START) : " + rs);
                 BufferedReader bufReader = new BufferedReader(new FileReader(csvfile));
                 for (int i = 1; (line = bufReader.readLine()) != null; i++) {           // path csv 하나씩 읽어서 한줄씩 parse
                     if (i == 1) {             //header 출력 x
                         continue;
                     }
                     else {
-                        coord3 = line.replace("\", " , "\"# ");
+                        coord3 = line.replace(", " , "# ");
                         coordi = coord3.split(",");
-
                         // insert csvfile 테이블
                         //coordi[4] = tenantId  , coordi[29] = rscListId , date = today, amount = coordi[38]
                         //rscListId 중복되면 업데이트
@@ -100,17 +109,26 @@ public class FileParsing2 {
                         stmt.execute(qry4);
                     }
                 }
+                logger.info("File Read,insert(END) : " + rs);
 
+
+                logger.info("(START)Status 'S' ------>  'C'  ");
                 //STATUS 'S' ----> 'C'
                 String qry2 = "update costfilelog set STATUS = 'C' where LC_PATH = '" + rs + "' ;";
                 stmt.executeUpdate(qry2);
+                logger.info("(END)Status 'S' ------>  'C'  ");
 
 
+
+                logger.info("(START)LC_PATH 'received' ------> 'complete'  ");
                 //LC_PATH 'received' ----> 'complete'
                 String LC_PATH_After = rs.replace("/usr/azureCostFile/received/", "/usr/azureCostFile/complete/");
                 String qry3 = "update costfilelog set LC_PATH = '" + LC_PATH_After + "' where LC_PATH = '" + rs + "';";
                 stmt.executeUpdate(qry3);
+                logger.info("(END)LC_PATH 'received' ------> 'complete'  ");
 
+
+                logger.info("File Selected(END) : " + rs);
             }
 
         } catch (Exception e) {
@@ -123,8 +141,7 @@ public class FileParsing2 {
             }
         }
 
+        logger.info("--------------------------FileParsing END--------------------------");
     }
 
 }
-
-
